@@ -525,11 +525,11 @@ public class Enunciate implements Runnable {
   public void run() {
     if (this.modules != null && !this.modules.isEmpty()) {
       //scan for any included types.
-      List<File> classpath = this.classpath == null ? new ArrayList<>() : this.classpath;
-      List<File> sourcepath = this.sourcepath == null ? new ArrayList<>() : this.sourcepath;
+      List<File> effectiveClasspath = this.classpath == null ? new ArrayList<>() : this.classpath;
+      List<File> effectiveSourcepath = this.sourcepath == null ? new ArrayList<>() : this.sourcepath;
 
-      List<URL> scanpath = new ArrayList<>(classpath.size() + sourcepath.size());
-      for (File entry : classpath) {
+      List<URL> scanpath = new ArrayList<>(effectiveClasspath.size() + effectiveSourcepath.size());
+      for (File entry : effectiveClasspath) {
         if (isValidScanpathEntry(entry)) {
           try {
             scanpath.add(entry.toURI().toURL());
@@ -539,7 +539,7 @@ public class Enunciate implements Runnable {
         }
       }
 
-      for (File entry : sourcepath) {
+      for (File entry : effectiveSourcepath) {
         if (isValidScanpathEntry(entry)) {
           try {
             scanpath.add(entry.toURI().toURL());
@@ -628,12 +628,12 @@ public class Enunciate implements Runnable {
 
       options.addAll(Arrays.asList("-processorpath", "")); // set the processor path to empty so the engine won't automatically find annotation processors
 
-      String cp = writeClasspath(classpath);
-      getLogger().debug("Compiler classpath: %s", new EnunciateLogger.ListWriter(classpath));
+      String cp = writeClasspath(effectiveClasspath);
+      getLogger().debug("Compiler classpath: %s", new EnunciateLogger.ListWriter(effectiveClasspath));
       options.addAll(Arrays.asList("-classpath", cp));
 
-      String sp = writeClasspath(sourcepath);
-      getLogger().debug("Compiler sourcepath: %s", new EnunciateLogger.ListWriter(sourcepath));
+      String sp = writeClasspath(effectiveSourcepath);
+      getLogger().debug("Compiler sourcepath: %s", new EnunciateLogger.ListWriter(effectiveSourcepath));
       options.addAll(Arrays.asList("-sourcepath", sp));
 
       List<String> compilerArgs = getCompilerArgs();
