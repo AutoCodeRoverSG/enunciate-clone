@@ -434,22 +434,22 @@ public class TestCSerialization extends TestCase {
     triangle.setBase(80);
     triangle.setId("triId");
     canvas.setShapes(Arrays.asList(rectangle, circle, triangle));
-//    byte[] swaRefBytes = "This is a bunch of random bytes that are to be used as an SWA ref attachment.".getBytes();
-//    byte[] explicitBase64Bytes = "This is some more random bytes that are to be used as a base 64 encoded attachment.".getBytes();
-//    byte[] attachment1Bytes = "This is some more random bytes that are to be used as the first MTOM attachment.".getBytes();
-//    byte[] attachment2Bytes = "This is some more random bytes that are to be used as the second MTOM attachment.".getBytes();
-//    byte[] attachment3Bytes = "This is some more random bytes that are to be used as the third MTOM attachment.".getBytes();
-//    CanvasAttachment attachment1 = new CanvasAttachment();
-//    attachment1.setValue(attachment1Bytes);
-//    CanvasAttachment attachment2 = new CanvasAttachment();
-//    attachment2.setValue(attachment2Bytes);
-//    CanvasAttachment attachment3 = new CanvasAttachment();
-//    attachment3.setValue(attachment3Bytes);
-//    ByteArrayDataSource dataSource = new ByteArrayDataSource(swaRefBytes, "application/octet-stream");
-//    dataSource.setName("somename");
-//    canvas.setBackgroundImage(new DataHandler(dataSource));
-//    canvas.setExplicitBase64Attachment(explicitBase64Bytes);
-//    canvas.setOtherAttachments(Arrays.asList(attachment1, attachment2, attachment3));
+//    
+//    
+//    
+//    
+//    
+//    
+//    
+//    
+//    
+//    
+//    
+//    
+//    
+//    
+//    
+//    
 
     canvas = processThroughXml(canvas);
 
