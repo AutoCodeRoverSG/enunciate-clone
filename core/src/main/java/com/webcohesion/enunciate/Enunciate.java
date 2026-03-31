@@ -285,7 +285,9 @@ public class Enunciate implements Runnable {
     }
 
     final File tempDir = File.createTempFile("enunciate" + (int) random, "", scratchDir);
-    tempDir.delete();
+    if (!tempDir.delete()) {
+      getLogger().warn("Failed to delete temp file %s", tempDir);
+    }
     tempDir.mkdirs();
 
     getLogger().debug("Created directory %s", tempDir);
