@@ -62,11 +62,11 @@ public class TestCSerialization extends TestCase {
       }
       this.exe = new File(exe);
 
-      String tempDir = System.getProperty("xml.tempdir");
-      if (tempDir == null) {
+      String tempDirPath = System.getProperty("xml.tempdir");
+      if (tempDirPath == null) {
         throw new IllegalStateException("The temp directory to put the XML files must be supplied via the 'xml.tempdir' property.");
       }
-      this.tempDir = new File(tempDir);
+      this.tempDir = new File(tempDirPath);
     }
   }
 
