@@ -325,20 +325,23 @@ public class Enunciate implements Runnable {
         to.mkdirs();
       }
 
-      COPY_LOOP:
       for (File file : files) {
+        boolean excluded = false;
         if (excludes != null) {
           for (File exclude : excludes) {
             if (file.equals(exclude)) {
-              continue COPY_LOOP;
+              excluded = true;
+              break;
             }
           }
         }
 
-        if (file.isDirectory()) {
-          copyDir(file, new File(to, file.getName()));
-        } else {
-          copyFile(file, new File(to, file.getName()));
+        if (!excluded) {
+          if (file.isDirectory()) {
+            copyDir(file, new File(to, file.getName()));
+          } else {
+            copyFile(file, new File(to, file.getName()));
+          }
         }
       }
     }
