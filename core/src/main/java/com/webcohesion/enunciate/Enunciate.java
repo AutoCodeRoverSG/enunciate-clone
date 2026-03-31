@@ -636,13 +636,13 @@ public class Enunciate implements Runnable {
       getLogger().debug("Compiler sourcepath: %s", new EnunciateLogger.ListWriter(sourcepath));
       options.addAll(Arrays.asList("-sourcepath", sp));
 
-      List<String> compilerArgs = getCompilerArgs();
-      getLogger().debug("Compiler args: %s", compilerArgs);
-      options.addAll(compilerArgs);
+      List<String> resolvedCompilerArgs = getCompilerArgs();
+      getLogger().debug("Compiler args: %s", resolvedCompilerArgs);
+      options.addAll(resolvedCompilerArgs);
 
       getLogger().debug("Compiler sources: %s", new EnunciateLogger.ListWriter(sourceFiles));
       List<JavaFileObject> sources = new ArrayList<>(sourceFiles.size());
-      String encoding = findEncoding(compilerArgs);
+      String encoding = findEncoding(resolvedCompilerArgs);
       for (URL sourceFile : sourceFiles) {
         sources.add(new URLFileObject(sourceFile, encoding));
       }
