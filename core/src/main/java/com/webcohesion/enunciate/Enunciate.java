@@ -585,7 +585,7 @@ public class Enunciate implements Runnable {
       getLogger().debug("Detected API Types: %s", new EnunciateLogger.ListWriter(includedTypes));
 
       //gather all the java source files.
-      Set<URL> sourceFiles = getSourceFileURLs();
+      Set<URL> sourceFileURLs = getSourceFileURLs();
       URLClassLoader apiClassLoader = new URLClassLoader(scanpath.toArray(new URL[0]));
       for (String javaFile : scannedSourceFiles) {
 
@@ -602,7 +602,7 @@ public class Enunciate implements Runnable {
         } else {
           URL resource = resources.nextElement();
           if (!resources.hasMoreElements()) {
-            sourceFiles.add(resource);
+            sourceFileURLs.add(resource);
           } else {
             StringBuilder locations = new StringBuilder("[").append(resource.toString());
             while (resources.hasMoreElements()) {
@@ -614,9 +614,9 @@ public class Enunciate implements Runnable {
         }
       }
 
-      if (sourceFiles.isEmpty()) {
+      if (sourceFileURLs.isEmpty()) {
         //Java compiler needs _something_ to compile, so we'll provide an dummy class.
-        sourceFiles.add(Enunciate.class.getResource("/com/webcohesion/enunciate/Nothing.java"));
+        sourceFileURLs.add(Enunciate.class.getResource("/com/webcohesion/enunciate/Nothing.java"));
       }
 
       //invoke the processor.
@@ -640,10 +640,10 @@ public class Enunciate implements Runnable {
       getLogger().debug("Compiler args: %s", compilerArgs);
       options.addAll(compilerArgs);
 
-      getLogger().debug("Compiler sources: %s", new EnunciateLogger.ListWriter(sourceFiles));
-      List<JavaFileObject> sources = new ArrayList<>(sourceFiles.size());
+      getLogger().debug("Compiler sources: %s", new EnunciateLogger.ListWriter(sourceFileURLs));
+      List<JavaFileObject> sources = new ArrayList<>(sourceFileURLs.size());
       String encoding = findEncoding(compilerArgs);
-      for (URL sourceFile : sourceFiles) {
+      for (URL sourceFile : sourceFileURLs) {
         sources.add(new URLFileObject(sourceFile, encoding));
       }
 
