@@ -72,6 +72,7 @@ public class CXMLClientModule extends BasicGeneratingModule implements ApiFeatur
    * The pattern to scrub is any non-word character.
    */
   private static final Pattern SCRUB_PATTERN = Pattern.compile("\\W");
+  private static final String XML_LIST_SERIALIZATION_WARNING = "%s: The C client code won't serialize xml lists as an array, instead passing the list as a string that will need to be parsed. This may cause confusion to C consumers.";
 
   JaxbModule jaxbModule;
   JaxrsModule jaxrsModule;
@@ -232,7 +233,7 @@ public class CXMLClientModule extends BasicGeneratingModule implements ApiFeatur
         for (TypeDefinition complexType : schemaInfo.getTypeDefinitions()) {
           for (Attribute attribute : complexType.getAttributes()) {
             if (attribute.isXmlList()) {
-              info("%s: The C client code won't serialize xml lists as an array, instead passing the list as a string that will need to be parsed. This may cause confusion to C consumers.", positionOf(attribute));
+              info(XML_LIST_SERIALIZATION_WARNING, positionOf(attribute));
             }
 
             if (attribute.isCollectionType() && attribute.isBinaryData()) {
@@ -243,7 +244,7 @@ public class CXMLClientModule extends BasicGeneratingModule implements ApiFeatur
 
           if (complexType.getValue() != null) {
             if (complexType.getValue().isXmlList()) {
-              info("%s: The C client code won't serialize xml lists as an array, instead passing the list as a string that will need to be parsed. This may cause confusion to C consumers.", positionOf(complexType.getValue()));
+              info(XML_LIST_SERIALIZATION_WARNING, positionOf(complexType.getValue()));
             }
 
             if (complexType.getValue().isCollectionType() && complexType.getValue().isBinaryData()) {
@@ -254,7 +255,7 @@ public class CXMLClientModule extends BasicGeneratingModule implements ApiFeatur
 
           for (Element element : complexType.getElements()) {
             if (element.isXmlList()) {
-              info("%s: The C client code won't serialize xml lists as an array, instead passing the list as a string that will need to be parsed. This may cause confusion to C consumers.", positionOf(element));
+              info(XML_LIST_SERIALIZATION_WARNING, positionOf(element));
             }
 
             if (element.getAccessorType() instanceof MapType && !element.isAdapted()) {
