@@ -56,11 +56,11 @@ public class TestCSerialization extends TestCase {
     this.skipCTests = "true".equalsIgnoreCase(skipCTests);
 
     if (!this.skipCTests) {
-      String exe = System.getProperty("processxml.exe");
-      if (exe == null) {
+      String exePath = System.getProperty("processxml.exe");
+      if (exePath == null) {
         throw new IllegalStateException("The path to the processjson script must be supplied via property 'processjson.rb'.");
       }
-      this.exe = new File(exe);
+      this.exe = new File(exePath);
 
       String tempDir = System.getProperty("xml.tempdir");
       if (tempDir == null) {
