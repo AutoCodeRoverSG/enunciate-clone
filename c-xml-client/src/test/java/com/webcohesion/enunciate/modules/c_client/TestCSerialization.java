@@ -52,8 +52,8 @@ public class TestCSerialization extends TestCase {
   protected void setUp() throws Exception {
     super.setUp();
 
-    String skipCTests = System.getProperty("skip.c.tests");
-    this.skipCTests = "true".equalsIgnoreCase(skipCTests);
+    String skipCTestsProperty = System.getProperty("skip.c.tests");
+    this.skipCTests = "true".equalsIgnoreCase(skipCTestsProperty);
 
     if (!this.skipCTests) {
       String exe = System.getProperty("processxml.exe");
