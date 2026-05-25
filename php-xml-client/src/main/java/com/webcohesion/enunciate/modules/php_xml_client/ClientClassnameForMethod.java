@@ -164,12 +164,7 @@ public class ClientClassnameForMethod extends com.webcohesion.enunciate.util.fre
       switch (kind) {
         case BOOLEAN:
           return "Boolean";
-        case BYTE:
-        case INT:
-        case SHORT:
-        case CHAR:
-        case FLOAT:
-        case DOUBLE:
+        case BYTE, INT, SHORT, CHAR, FLOAT, DOUBLE:
           return "Double";
         case LONG:
           return "Integer";

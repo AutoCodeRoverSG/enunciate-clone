@@ -47,12 +47,7 @@ public class JsonPrimitiveType implements JsonType {
   @Override
   public boolean isNumber() {
     switch (type.getKind()) {
-      case DOUBLE:
-      case FLOAT:
-      case INT:
-      case LONG:
-      case SHORT:
-      case BYTE: //todo: verify 'byte' serialization?
+      case DOUBLE, FLOAT, INT, LONG, SHORT, BYTE: //todo: verify 'byte' serialization?
         return true;
     }
     return false;

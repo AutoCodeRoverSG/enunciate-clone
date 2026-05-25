@@ -125,13 +125,9 @@ public class TypeNameForMethod extends com.webcohesion.enunciate.util.freemarker
       switch (kind) {
         case BOOLEAN:
           return "boolean";
-        case BYTE:
-        case INT:
-        case SHORT:
-        case LONG:
+        case BYTE, INT, SHORT, LONG:
           return "integer";
-        case FLOAT:
-        case DOUBLE:
+        case FLOAT, DOUBLE:
           return "double";
         default:
           return "string";
