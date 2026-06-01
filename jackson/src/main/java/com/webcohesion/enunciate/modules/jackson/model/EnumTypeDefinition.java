@@ -60,14 +60,10 @@ public class EnumTypeDefinition extends SimpleTypeDefinition {
           case BOOLEAN:
             baseType = KnownJsonType.BOOLEAN;
             break;
-          case FLOAT:
-          case DOUBLE:
+          case FLOAT, DOUBLE:
             baseType = KnownJsonType.NUMBER;
             break;
-          case INT:
-          case LONG:
-          case SHORT:
-          case BYTE:
+          case INT, LONG, SHORT, BYTE:
             baseType = KnownJsonType.WHOLE_NUMBER;
             break;
         }
