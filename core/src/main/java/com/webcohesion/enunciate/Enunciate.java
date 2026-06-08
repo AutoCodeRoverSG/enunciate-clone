@@ -910,12 +910,12 @@ public class Enunciate implements Runnable {
     private final String encoding;
 
     public URLFileObject(URL source, String encoding) {
-      super(toURI(source), Kind.SOURCE);
+      super(convertToURI(source), Kind.SOURCE);
       this.source = source;
       this.encoding = encoding;
     }
 
-    static URI toURI(URL source) {
+    static URI convertToURI(URL source) {
       try {
         if ("jar".equals(source.getProtocol())) {
           return new URI(source.toString().replace("jar:file:", "file:"));
