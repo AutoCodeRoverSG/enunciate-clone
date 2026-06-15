@@ -154,7 +154,7 @@ public class PHPXMLClientModule extends BasicGeneratingModule implements ApiFeat
 
     model.put("schemaTypes", schemaTypes);
     model.put("namespaceFor", new ClientPackageForMethod(packageToNamespaceConversions, this.context));
-    ClientClassnameForMethod classnameFor = new ClientClassnameForMethod(packageToNamespaceConversions, jaxbContext);
+    PhpClientClassnameForMethod classnameFor = new PhpClientClassnameForMethod(packageToNamespaceConversions, jaxbContext);
     model.put("classnameFor", classnameFor);
     model.put("typeNameFor", new TypeNameForMethod(packageToNamespaceConversions, jaxbContext));
     model.put("simpleNameFor", new SimpleNameWithParamsMethod(classnameFor));

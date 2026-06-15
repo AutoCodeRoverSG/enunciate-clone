@@ -38,6 +38,8 @@ import static com.webcohesion.enunciate.util.AnnotationUtils.isIgnored;
  */
 public class QNameEnumTypeDefinition extends EnumTypeDefinition {
 
+  private static final String DEFAULT_MARKER = "##default";
+
   private final String namespace;
 
   public QNameEnumTypeDefinition(TypeElement delegate, EnunciateJacksonContext context) {
@@ -53,7 +55,7 @@ public class QNameEnumTypeDefinition extends EnumTypeDefinition {
 
     XmlSchema schemaInfo = getPackage().getAnnotation(XmlSchema.class);
     String namespace = schemaInfo == null ? "" : schemaInfo.namespace();
-    if (!"##default".equals(xmlQNameEnum.namespace())) {
+    if (!DEFAULT_MARKER.equals(xmlQNameEnum.namespace())) {
       namespace = xmlQNameEnum.namespace();
     }
     this.namespace = namespace;
@@ -93,10 +95,10 @@ public class QNameEnumTypeDefinition extends EnumTypeDefinition {
           continue;
         }
 
-        if (!"##default".equals(enumValueInfo.namespace())) {
+        if (!DEFAULT_MARKER.equals(enumValueInfo.namespace())) {
           ns = enumValueInfo.namespace();
         }
-        if (!"##default".equals(enumValueInfo.localPart())) {
+        if (!DEFAULT_MARKER.equals(enumValueInfo.localPart())) {
           localPart = enumValueInfo.localPart();
         }
       }

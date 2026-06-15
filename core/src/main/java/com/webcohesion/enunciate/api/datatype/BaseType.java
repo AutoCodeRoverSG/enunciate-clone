@@ -53,6 +53,7 @@ public enum BaseType {
         if (el instanceof TypeElement && ((TypeElement) el).getQualifiedName().contentEquals(String.class.getName())) {
           return BaseType.string;
         }
+        return BaseType.object;
       default:
         return BaseType.object;
     }
