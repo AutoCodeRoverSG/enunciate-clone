@@ -526,9 +526,9 @@ public class Enunciate implements Runnable {
     if (this.modules != null && !this.modules.isEmpty()) {
       //scan for any included types.
       List<File> classpath = this.classpath == null ? new ArrayList<>() : this.classpath;
-      List<File> sourcepath = this.sourcepath == null ? new ArrayList<>() : this.sourcepath;
+      List<File> effectiveSourcepath = this.sourcepath == null ? new ArrayList<>() : this.sourcepath;
 
-      List<URL> scanpath = new ArrayList<>(classpath.size() + sourcepath.size());
+      List<URL> scanpath = new ArrayList<>(classpath.size() + effectiveSourcepath.size());
       for (File entry : classpath) {
         if (isValidScanpathEntry(entry)) {
           try {
@@ -539,7 +539,7 @@ public class Enunciate implements Runnable {
         }
       }
 
-      for (File entry : sourcepath) {
+      for (File entry : effectiveSourcepath) {
         if (isValidScanpathEntry(entry)) {
           try {
             scanpath.add(entry.toURI().toURL());
@@ -632,8 +632,8 @@ public class Enunciate implements Runnable {
       getLogger().debug("Compiler classpath: %s", new EnunciateLogger.ListWriter(classpath));
       options.addAll(Arrays.asList("-classpath", cp));
 
-      String sp = writeClasspath(sourcepath);
-      getLogger().debug("Compiler sourcepath: %s", new EnunciateLogger.ListWriter(sourcepath));
+      String sp = writeClasspath(effectiveSourcepath);
+      getLogger().debug("Compiler sourcepath: %s", new EnunciateLogger.ListWriter(effectiveSourcepath));
       options.addAll(Arrays.asList("-sourcepath", sp));
 
       List<String> compilerArgs = getCompilerArgs();
