@@ -585,7 +585,7 @@ public class Enunciate implements Runnable {
       getLogger().debug("Detected API Types: %s", new EnunciateLogger.ListWriter(includedTypes));
 
       //gather all the java source files.
-      Set<URL> sourceFiles = getSourceFileURLs();
+      Set<URI> sourceFiles = getSourceFileURLs();
       URLClassLoader apiClassLoader = new URLClassLoader(scanpath.toArray(new URL[0]));
       for (String javaFile : scannedSourceFiles) {
 
@@ -602,7 +602,11 @@ public class Enunciate implements Runnable {
         } else {
           URL resource = resources.nextElement();
           if (!resources.hasMoreElements()) {
-            sourceFiles.add(resource);
+            try {
+              sourceFiles.add(resource.toURI());
+            } catch (URISyntaxException e) {
+              throw new EnunciateException(e);
+            }
           } else {
             StringBuilder locations = new StringBuilder("[").append(resource.toString());
             while (resources.hasMoreElements()) {
@@ -616,7 +620,11 @@ public class Enunciate implements Runnable {
 
       if (sourceFiles.isEmpty()) {
         //Java compiler needs _something_ to compile, so we'll provide an dummy class.
-        sourceFiles.add(Enunciate.class.getResource("/com/webcohesion/enunciate/Nothing.java"));
+        try {
+          sourceFiles.add(Enunciate.class.getResource("/com/webcohesion/enunciate/Nothing.java").toURI());
+        } catch (URISyntaxException e) {
+          throw new EnunciateException(e);
+        }
       }
 
       //invoke the processor.
@@ -643,8 +651,12 @@ public class Enunciate implements Runnable {
       getLogger().debug("Compiler sources: %s", new EnunciateLogger.ListWriter(sourceFiles));
       List<JavaFileObject> sources = new ArrayList<>(sourceFiles.size());
       String encoding = findEncoding(compilerArgs);
-      for (URL sourceFile : sourceFiles) {
-        sources.add(new URLFileObject(sourceFile, encoding));
+      for (URI sourceFile : sourceFiles) {
+        try {
+          sources.add(new URLFileObject(sourceFile.toURL(), encoding));
+        } catch (MalformedURLException e) {
+          throw new EnunciateException(e);
+        }
       }
 
       JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
@@ -771,14 +783,10 @@ public class Enunciate implements Runnable {
     return builder.toString();
   }
 
-  protected Set<URL> getSourceFileURLs() {
-    Set<URL> sourceFiles = new HashSet<>(this.sourceFiles.size());
+  protected Set<URI> getSourceFileURLs() {
+    Set<URI> sourceFiles = new HashSet<>(this.sourceFiles.size());
     for (File sourceFile : this.sourceFiles) {
-      try {
-        sourceFiles.add(sourceFile.toURI().toURL());
-      } catch (MalformedURLException e) {
-        throw new RuntimeException(e);
-      }
+      sourceFiles.add(sourceFile.toURI());
     }
     return sourceFiles;
   }
