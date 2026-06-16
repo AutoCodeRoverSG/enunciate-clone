@@ -50,6 +50,7 @@ import java.util.zip.ZipOutputStream;
 public class Enunciate implements Runnable {
 
   private static final String DUPLICATE_CLASS_ERROR_MESSAGE_ENGLISH = "file does not contain class";
+  private static final String JAVAC_LOG_FORMAT = "[javac] %s";
 
   private Set<File> sourceFiles = new TreeSet<>();
   private List<EnunciateModule> modules;
@@ -661,7 +662,7 @@ public class Enunciate implements Runnable {
             BufferedReader reader = new BufferedReader(new StringReader(outputText));
             String line = reader.readLine();
             while (line != null) {
-              getLogger().warn("[javac] %s", line);
+              getLogger().warn(JAVAC_LOG_FORMAT, line);
               line = reader.readLine();
             }
           }
@@ -676,7 +677,7 @@ public class Enunciate implements Runnable {
             boolean duplicateClassErrorDetected = line != null && line.contains(DUPLICATE_CLASS_ERROR_MESSAGE_ENGLISH);
             getLogger().warn("[javac] [%s] %s:%s:%s %s", diagnostic.getKind(), diagnostic.getSource(), diagnostic.getLineNumber(), diagnostic.getColumnNumber(), line == null ? "" : line);
             while (line != null) {
-              getLogger().warn("[javac] %s", line);
+              getLogger().warn(JAVAC_LOG_FORMAT, line);
               line = message.readLine();
             }
             if (duplicateClassErrorDetected) {
@@ -689,7 +690,7 @@ public class Enunciate implements Runnable {
               getLogger().warn("");
             }
           } catch (IOException e) {
-            getLogger().warn("[javac] %s", diagnostic);
+            getLogger().warn(JAVAC_LOG_FORMAT, diagnostic);
           }
         }
 
@@ -706,7 +707,7 @@ public class Enunciate implements Runnable {
         throw new EnunciateException("Enunciate compile failed.");
       }
 
-      getLogger().debug("[javac] %s", compilerOutput);
+      getLogger().debug(JAVAC_LOG_FORMAT, compilerOutput);
       for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics.getDiagnostics()) {
         getLogger().debug("[javac] [%s] %s:%s:%s %s", diagnostic.getKind(), diagnostic.getSource(), diagnostic.getLineNumber(), diagnostic.getColumnNumber(), diagnostic);
       }
