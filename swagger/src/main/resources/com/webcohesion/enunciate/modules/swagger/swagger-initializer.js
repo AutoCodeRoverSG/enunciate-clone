@@ -1,6 +1,6 @@
 window.onload = function() {
   //<editor-fold desc="Changeable Configuration Block">
-  let url = window.location.search.match(/url=([^&]+)/);
+  let url = globalThis.location.search.match(/url=([^&]+)/);
   if (url && url.length > 1) {
     url = decodeURIComponent(url[1]);
   }
