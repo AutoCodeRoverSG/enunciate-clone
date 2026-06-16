@@ -10,7 +10,7 @@ window.onload = function() {
   else {
     var baseUrl = document.location.href;
     //this removes the anchor at the end, if there is one
-    baseUrl = baseUrl.substring(0, (baseUrl.indexOf("#") === -1) ? baseUrl.length : baseUrl.indexOf("#"));
+    baseUrl = baseUrl.substring(0, baseUrl.includes("#") ? baseUrl.indexOf("#") : baseUrl.length);
     //this removes the query after the file name, if there is one
     baseUrl = baseUrl.substring(0, (baseUrl.indexOf("?") === -1) ? baseUrl.length : baseUrl.indexOf("?"));
     //this removes everything after the last slash in the path
