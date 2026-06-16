@@ -4,7 +4,7 @@ window.onload = function() {
   if (url && url.length > 1) {
     url = decodeURIComponent(url[1]);
   }
-  else if (document.location.href.substring(0, 5) === "file:") {
+  else if (document.location.href.startsWith("file:")) {
     url = "../openapi.json";
   }
   else {
