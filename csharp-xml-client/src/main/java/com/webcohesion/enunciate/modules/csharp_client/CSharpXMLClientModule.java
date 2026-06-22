@@ -189,124 +189,234 @@ public class CSharpXMLClientModule extends BasicGeneratingModule implements ApiF
 
   protected boolean usesUnmappableElements() {
     boolean usesUnmappableElements = false;
-
-    if (this.jaxwsModule != null && this.jaxwsModule.getJaxwsContext() != null) {
-      for (EndpointInterface ei : this.jaxwsModule.getJaxwsContext().getEndpointInterfaces()) {
-        Map<String, javax.lang.model.element.Element> paramsByName = new HashMap<>();
-        for (WebMethod webMethod : ei.getWebMethods()) {
-          for (WebParam webParam : webMethod.getWebParameters()) {
-            //no out or in/out non-header parameters!
-            if (webParam.isHeader()) {
-              //unique parameter names for all header parameters of a given ei
-              javax.lang.model.element.Element conflict = paramsByName.put(webParam.getElementName(), webParam);
-              if (conflict != null) {
-                warn("%s: C# requires that all header parameters defined in the same endpoint interface have unique names. This parameter conflicts with the one at %s.", positionOf(webParam), positionOf(conflict));
-                usesUnmappableElements = true;
-              }
-
-              DecoratedTypeMirror paramType = (DecoratedTypeMirror) webParam.getType();
-              if (paramType.isCollection()) {
-                warn("%s: C# can't handle header parameters that are collections.", positionOf(webParam));
-                usesUnmappableElements = true;
-              }
-
-            }
-            else if (webParam.getMode() != jakarta.jws.WebParam.Mode.IN) {
-              warn("%s: C# doesn't support non-header parameters of mode %s.", positionOf(webParam), webParam.getMode());
-              usesUnmappableElements = true;
-            }
-
-            //parameters/results can't be maps
-            if (webParam.getType() instanceof MapType) {
-              warn("%s: C# can't handle parameter types that are maps.", positionOf(webParam));
-              usesUnmappableElements = true;
-            }
-          }
-
-          //web result cannot be a header.
-          if (webMethod.getWebResult().isHeader()) {
-            javax.lang.model.element.Element conflict = paramsByName.put(webMethod.getWebResult().getElementName(), webMethod);
-            if (conflict != null) {
-              warn("%s: C# requires that all header parameters defined in the same endpoint interface have unique names. This return parameter conflicts with the one at %s.", positionOf(webMethod), positionOf(conflict));
-              usesUnmappableElements = true;
-            }
-          }
-
-          if (webMethod.getWebResult().getType() instanceof MapType) {
-            warn("%s: C# can't handle return types that are maps.", positionOf(webMethod));
-            usesUnmappableElements = true;
-          }
-
-          if (ElementUtils.capitalize(webMethod.getClientSimpleName()).equals(ei.getClientSimpleName())) {
-            warn("%s: C# can't handle methods that are of the same name as their containing class. Either rename the method, or use the @org.codehaus.enunciate.ClientName annotation to rename the method (or type) on the client-side.", positionOf(webMethod));
-            usesUnmappableElements = true;
-          }
-        }
-      }
-    }
-
-    if (this.jaxbModule != null && this.jaxbModule.getJaxbContext() != null && !this.jaxbModule.getJaxbContext().getSchemas().isEmpty()) {
-      for (SchemaInfo schemaInfo : this.jaxbModule.getJaxbContext().getSchemas().values()) {
-        for (TypeDefinition complexType : schemaInfo.getTypeDefinitions()) {
-          for (Attribute attribute : complexType.getAttributes()) {
-            if (ElementUtils.capitalize(attribute.getClientSimpleName()).equals(complexType.getClientSimpleName())) {
-              warn("%s: C# can't handle properties/fields that are of the same name as their containing class. Either rename the property/field, or use the @com.webcohesion.enunciate.metadata.ClientName annotation to rename the property/field on the client-side.", positionOf(attribute));
-              usesUnmappableElements = true;
-            }
-          }
-
-          if (complexType.getValue() != null) {
-            if (ElementUtils.capitalize(complexType.getValue().getClientSimpleName()).equals(complexType.getClientSimpleName())) {
-              warn("%s: C# can't handle properties/fields that are of the same name as their containing class. Either rename the property/field, or use the @com.webcohesion.enunciate.metadata.ClientName annotation to rename the property/field on the client-side.", positionOf(complexType.getValue()));
-              usesUnmappableElements = true;
-            }
-          }
-
-          for (Element element : complexType.getElements()) {
-            if (ElementUtils.capitalize(element.getClientSimpleName()).equals(complexType.getClientSimpleName())) {
-              warn("%s: C# can't handle properties/fields that are of the same name as their containing class. Either rename the property/field, or use the @com.webcohesion.enunciate.metadata.ClientName annotation to rename the property/field on the client-side.", positionOf(element));
-              usesUnmappableElements = true;
-            }
-
-            if (element.getAccessorType() instanceof MapType && !element.isAdapted()) {
-              warn("%s: The C# client doesn't have a built-in way of serializing a Map. Use @XmlJavaTypeAdapter to supply your own adapter for the Map.", positionOf(element));
-              usesUnmappableElements = true;
-            }
-          }
-
-          if (complexType instanceof EnumTypeDefinition) {
-            List<VariableElement> enums = complexType.enumValues();
-            for (VariableElement enumItem : enums) {
-              if (isIgnored(enumItem)) {
-                continue;
-              }
-
-              String simpleName = enumItem.getSimpleName().toString();
-              ClientName clientNameInfo = enumItem.getAnnotation(ClientName.class);
-              if (clientNameInfo != null) {
-                simpleName = clientNameInfo.value();
-              }
-
-              if ("event".equals(simpleName)) {
-                warn("%s: C# can't handle an enum constant named 'Event'. Either rename the enum constant, or use the @com.webcohesion.enunciate.metadata.ClientName annotation to rename it on the client-side.", positionOf(enumItem));
-                usesUnmappableElements = true;
-              }
-              else if (simpleName.equals(complexType.getClientSimpleName())) {
-                warn("C# can't handle properties/fields that are of the same name as their containing class. Either rename the property/field, or use the @com.webcohesion.enunciate.metadata.ClientName annotation to rename the property/field on the client-side.", positionOf(enumItem));
-                usesUnmappableElements = true;
-              }
-            }
-          }
-
-          if (ElementUtils.isMap(complexType)) {
-            warn("%s: C# client doesn't handles types that implement java.util.Map. Use @XmlJavaTypeAdapter to supply your own adapter for the Map.", positionOf(complexType));
-            usesUnmappableElements = true;
-          }
-        }
-      }
-    }
-
+    usesUnmappableElements = checkUnmappableJaxwsElements() || usesUnmappableElements;
+    usesUnmappableElements = checkUnmappableJaxbElements() || usesUnmappableElements;
     return usesUnmappableElements;
+  }
+
+  private boolean checkUnmappableJaxwsElements() {
+    if (this.jaxwsModule == null || this.jaxwsModule.getJaxwsContext() == null) {
+      return false;
+    }
+
+    boolean usesUnmappableElements = false;
+    for (EndpointInterface endpointInterface : this.jaxwsModule.getJaxwsContext().getEndpointInterfaces()) {
+      usesUnmappableElements = checkEndpointInterface(endpointInterface) || usesUnmappableElements;
+    }
+    return usesUnmappableElements;
+  }
+
+  private boolean checkEndpointInterface(EndpointInterface endpointInterface) {
+    boolean usesUnmappableElements = false;
+    Map<String, javax.lang.model.element.Element> paramsByName = new HashMap<>();
+    for (WebMethod webMethod : endpointInterface.getWebMethods()) {
+      usesUnmappableElements = checkWebMethod(endpointInterface, webMethod, paramsByName) || usesUnmappableElements;
+    }
+    return usesUnmappableElements;
+  }
+
+  private boolean checkWebMethod(EndpointInterface endpointInterface, WebMethod webMethod, Map<String, javax.lang.model.element.Element> paramsByName) {
+    boolean usesUnmappableElements = false;
+    for (WebParam webParam : webMethod.getWebParameters()) {
+      usesUnmappableElements = checkWebParam(webParam, paramsByName) || usesUnmappableElements;
+    }
+
+    usesUnmappableElements = checkWebResultHeader(webMethod, paramsByName) || usesUnmappableElements;
+    usesUnmappableElements = checkWebResultType(webMethod) || usesUnmappableElements;
+    usesUnmappableElements = checkMethodNameConflict(endpointInterface, webMethod) || usesUnmappableElements;
+    return usesUnmappableElements;
+  }
+
+  private boolean checkWebParam(WebParam webParam, Map<String, javax.lang.model.element.Element> paramsByName) {
+    boolean usesUnmappableElements = false;
+    //no out or in/out non-header parameters!
+    if (webParam.isHeader()) {
+      usesUnmappableElements = checkHeaderParameterNameConflict(webParam, paramsByName) || usesUnmappableElements;
+      usesUnmappableElements = checkHeaderCollectionParameter(webParam) || usesUnmappableElements;
+    }
+    else if (webParam.getMode() != jakarta.jws.WebParam.Mode.IN) {
+      warn("%s: C# doesn't support non-header parameters of mode %s.", positionOf(webParam), webParam.getMode());
+      usesUnmappableElements = true;
+    }
+
+    return checkMapParameterType(webParam) || usesUnmappableElements;
+  }
+
+  private boolean checkHeaderParameterNameConflict(WebParam webParam, Map<String, javax.lang.model.element.Element> paramsByName) {
+    //unique parameter names for all header parameters of a given ei
+    javax.lang.model.element.Element conflict = paramsByName.put(webParam.getElementName(), webParam);
+    if (conflict == null) {
+      return false;
+    }
+
+    warn("%s: C# requires that all header parameters defined in the same endpoint interface have unique names. This parameter conflicts with the one at %s.", positionOf(webParam), positionOf(conflict));
+    return true;
+  }
+
+  private boolean checkHeaderCollectionParameter(WebParam webParam) {
+    DecoratedTypeMirror paramType = (DecoratedTypeMirror) webParam.getType();
+    if (!paramType.isCollection()) {
+      return false;
+    }
+
+    warn("%s: C# can't handle header parameters that are collections.", positionOf(webParam));
+    return true;
+  }
+
+  private boolean checkMapParameterType(WebParam webParam) {
+    //parameters/results can't be maps
+    if (!(webParam.getType() instanceof MapType)) {
+      return false;
+    }
+
+    warn("%s: C# can't handle parameter types that are maps.", positionOf(webParam));
+    return true;
+  }
+
+  private boolean checkWebResultHeader(WebMethod webMethod, Map<String, javax.lang.model.element.Element> paramsByName) {
+    //web result cannot be a header.
+    if (!webMethod.getWebResult().isHeader()) {
+      return false;
+    }
+
+    javax.lang.model.element.Element conflict = paramsByName.put(webMethod.getWebResult().getElementName(), webMethod);
+    if (conflict == null) {
+      return false;
+    }
+
+    warn("%s: C# requires that all header parameters defined in the same endpoint interface have unique names. This return parameter conflicts with the one at %s.", positionOf(webMethod), positionOf(conflict));
+    return true;
+  }
+
+  private boolean checkWebResultType(WebMethod webMethod) {
+    if (!(webMethod.getWebResult().getType() instanceof MapType)) {
+      return false;
+    }
+
+    warn("%s: C# can't handle return types that are maps.", positionOf(webMethod));
+    return true;
+  }
+
+  private boolean checkMethodNameConflict(EndpointInterface endpointInterface, WebMethod webMethod) {
+    if (!ElementUtils.capitalize(webMethod.getClientSimpleName()).equals(endpointInterface.getClientSimpleName())) {
+      return false;
+    }
+
+    warn("%s: C# can't handle methods that are of the same name as their containing class. Either rename the method, or use the @org.codehaus.enunciate.ClientName annotation to rename the method (or type) on the client-side.", positionOf(webMethod));
+    return true;
+  }
+
+  private boolean checkUnmappableJaxbElements() {
+    if (this.jaxbModule == null || this.jaxbModule.getJaxbContext() == null || this.jaxbModule.getJaxbContext().getSchemas().isEmpty()) {
+      return false;
+    }
+
+    boolean usesUnmappableElements = false;
+    for (SchemaInfo schemaInfo : this.jaxbModule.getJaxbContext().getSchemas().values()) {
+      for (TypeDefinition complexType : schemaInfo.getTypeDefinitions()) {
+        usesUnmappableElements = checkTypeDefinition(complexType) || usesUnmappableElements;
+      }
+    }
+    return usesUnmappableElements;
+  }
+
+  private boolean checkTypeDefinition(TypeDefinition complexType) {
+    boolean usesUnmappableElements = false;
+    usesUnmappableElements = checkAttributeNameConflicts(complexType) || usesUnmappableElements;
+    usesUnmappableElements = checkValueNameConflict(complexType) || usesUnmappableElements;
+    usesUnmappableElements = checkElementConflicts(complexType) || usesUnmappableElements;
+    usesUnmappableElements = checkEnumConflicts(complexType) || usesUnmappableElements;
+    usesUnmappableElements = checkMapTypeConflict(complexType) || usesUnmappableElements;
+    return usesUnmappableElements;
+  }
+
+  private boolean checkAttributeNameConflicts(TypeDefinition complexType) {
+    boolean usesUnmappableElements = false;
+    for (Attribute attribute : complexType.getAttributes()) {
+      if (hasClientNameConflict(attribute.getClientSimpleName(), complexType.getClientSimpleName())) {
+        warn("%s: C# can't handle properties/fields that are of the same name as their containing class. Either rename the property/field, or use the @com.webcohesion.enunciate.metadata.ClientName annotation to rename the property/field on the client-side.", positionOf(attribute));
+        usesUnmappableElements = true;
+      }
+    }
+    return usesUnmappableElements;
+  }
+
+  private boolean checkValueNameConflict(TypeDefinition complexType) {
+    if (complexType.getValue() == null) {
+      return false;
+    }
+
+    if (!hasClientNameConflict(complexType.getValue().getClientSimpleName(), complexType.getClientSimpleName())) {
+      return false;
+    }
+
+    warn("%s: C# can't handle properties/fields that are of the same name as their containing class. Either rename the property/field, or use the @com.webcohesion.enunciate.metadata.ClientName annotation to rename the property/field on the client-side.", positionOf(complexType.getValue()));
+    return true;
+  }
+
+  private boolean checkElementConflicts(TypeDefinition complexType) {
+    boolean usesUnmappableElements = false;
+    for (Element element : complexType.getElements()) {
+      if (hasClientNameConflict(element.getClientSimpleName(), complexType.getClientSimpleName())) {
+        warn("%s: C# can't handle properties/fields that are of the same name as their containing class. Either rename the property/field, or use the @com.webcohesion.enunciate.metadata.ClientName annotation to rename the property/field on the client-side.", positionOf(element));
+        usesUnmappableElements = true;
+      }
+
+      if (element.getAccessorType() instanceof MapType && !element.isAdapted()) {
+        warn("%s: The C# client doesn't have a built-in way of serializing a Map. Use @XmlJavaTypeAdapter to supply your own adapter for the Map.", positionOf(element));
+        usesUnmappableElements = true;
+      }
+    }
+    return usesUnmappableElements;
+  }
+
+  private boolean checkEnumConflicts(TypeDefinition complexType) {
+    if (!(complexType instanceof EnumTypeDefinition)) {
+      return false;
+    }
+
+    boolean usesUnmappableElements = false;
+    for (VariableElement enumItem : complexType.enumValues()) {
+      usesUnmappableElements = checkEnumConstantConflict(complexType, enumItem) || usesUnmappableElements;
+    }
+    return usesUnmappableElements;
+  }
+
+  private boolean checkEnumConstantConflict(TypeDefinition complexType, VariableElement enumItem) {
+    if (isIgnored(enumItem)) {
+      return false;
+    }
+
+    String simpleName = enumItem.getSimpleName().toString();
+    ClientName clientNameInfo = enumItem.getAnnotation(ClientName.class);
+    if (clientNameInfo != null) {
+      simpleName = clientNameInfo.value();
+    }
+
+    if ("event".equals(simpleName)) {
+      warn("%s: C# can't handle an enum constant named 'Event'. Either rename the enum constant, or use the @com.webcohesion.enunciate.metadata.ClientName annotation to rename it on the client-side.", positionOf(enumItem));
+      return true;
+    }
+
+    if (!simpleName.equals(complexType.getClientSimpleName())) {
+      return false;
+    }
+
+    warn("C# can't handle properties/fields that are of the same name as their containing class. Either rename the property/field, or use the @com.webcohesion.enunciate.metadata.ClientName annotation to rename the property/field on the client-side.", positionOf(enumItem));
+    return true;
+  }
+
+  private boolean checkMapTypeConflict(TypeDefinition complexType) {
+    if (!ElementUtils.isMap(complexType)) {
+      return false;
+    }
+
+    warn("%s: C# client doesn't handles types that implement java.util.Map. Use @XmlJavaTypeAdapter to supply your own adapter for the Map.", positionOf(complexType));
+    return true;
+  }
+
+  private boolean hasClientNameConflict(String clientSimpleName, String containingTypeClientSimpleName) {
+    return ElementUtils.capitalize(clientSimpleName).equals(containingTypeClientSimpleName);
   }
 
   private File generateSources(Map<String, String> packageToNamespaceConversions) {

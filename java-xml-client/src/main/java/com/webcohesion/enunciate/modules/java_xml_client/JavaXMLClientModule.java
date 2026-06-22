@@ -158,135 +158,209 @@ public class JavaXMLClientModule extends BasicGeneratingModule implements ApiFea
     model.put("generatedCodeLicense", this.enunciate.getConfiguration().readGeneratedCodeLicenseFile());
     model.put("annotationValue", new AnnotationValueMethod());
 
-    Set<String> facetIncludes = new TreeSet<>(this.enunciate.getConfiguration().getFacetIncludes());
-    facetIncludes.addAll(getFacetIncludes());
-    Set<String> facetExcludes = new TreeSet<>(this.enunciate.getConfiguration().getFacetExcludes());
-    facetExcludes.addAll(getFacetExcludes());
-    FacetFilter facetFilter = new FacetFilter(facetIncludes, facetExcludes);
-
+    FacetFilter facetFilter = createFacetFilter();
     model.put("isFacetExcluded", new IsFacetExcludedMethod(facetFilter));
 
-    boolean upToDate = isUpToDateWithSources(sourceDir);
-    if (!upToDate) {
-      try {
-        debug("Generating the Java client classes...");
-
-        HashMap<String, WebFault> allFaults = new HashMap<>();
-        AntPatternMatcher matcher = new AntPatternMatcher();
-        matcher.setPathSeparator(".");
-
-        if (this.jaxwsModule != null) {
-          Set<String> seeAlsos = new TreeSet<>();
-          // Process the annotations, the request/response beans, and gather the set of web faults
-          // for each endpoint interface.
-          for (WsdlInfo wsdlInfo : this.jaxwsModule.getJaxwsContext().getWsdls().values()) {
-            for (EndpointInterface ei : wsdlInfo.getEndpointInterfaces()) {
-              if (facetFilter.accept(ei)) {
-                for (WebMethod webMethod : ei.getWebMethods()) {
-                  if (facetFilter.accept(webMethod)) {
-                    for (WebMessage webMessage : webMethod.getMessages()) {
-                      if (webMessage instanceof RequestWrapper) {
-                        model.put("message", webMessage);
-                        processTemplate(getTemplateURL("client-request-bean.fmt"), model);
-                        seeAlsos.add(getBeanName(new ClientClassnameForMethod(conversions, jaxbContext), ((RequestWrapper) webMessage).getRequestBeanName()));
-                      }
-                      else if (webMessage instanceof ResponseWrapper) {
-                        model.put("message", webMessage);
-                        processTemplate(getTemplateURL("client-response-bean.fmt"), model);
-                        seeAlsos.add(getBeanName(new ClientClassnameForMethod(conversions, jaxbContext), ((ResponseWrapper) webMessage).getResponseBeanName()));
-                      }
-                      else if (webMessage instanceof WebFault) {
-                        WebFault fault = (WebFault) webMessage;
-                        allFaults.put(fault.getQualifiedName().toString(), fault);
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          //gather the annotation information and process the possible beans for each web fault.
-          for (WebFault webFault : allFaults.values()) {
-            boolean implicit = webFault.isImplicitSchemaElement();
-            String faultBean = implicit ? getBeanName(new ClientClassnameForMethod(conversions, jaxbContext), webFault.getImplicitFaultBeanQualifiedName()) : new ClientClassnameForMethod(conversions, jaxbContext).convert(webFault.getExplicitFaultBeanType());
-            seeAlsos.add(faultBean);
-
-            if (implicit) {
-              model.put("fault", webFault);
-              processTemplate(getTemplateURL("client-fault-bean.fmt"), model);
-            }
-          }
-
-          model.put("seeAlsoBeans", seeAlsos);
-          model.put("baseUri", this.enunciate.getConfiguration().getApplicationRoot());
-          for (WsdlInfo wsdlInfo : this.jaxwsModule.getJaxwsContext().getWsdls().values()) {
-            if (wsdlInfo.getWsdlFile() == null) {
-              throw new EnunciateException("WSDL " + wsdlInfo.getId() + " doesn't have a filename.");
-            }
-
-            for (EndpointInterface ei : wsdlInfo.getEndpointInterfaces()) {
-              if (facetFilter.accept(ei)) {
-                model.put("endpointInterface", ei);
-                model.put("wsdlFileName", wsdlInfo.getFilename());
-
-                processTemplate(getTemplateURL("client-endpoint-interface.fmt"), model);
-                processTemplate(getTemplateURL("client-soap-endpoint-impl.fmt"), model);
-              }
-            }
-          }
-
-          for (WebFault webFault : allFaults.values()) {
-            if (useServerSide(webFault, matcher)) {
-              copyServerSideType(sourceDir, webFault);
-            }
-            else {
-              TypeElement superFault = (TypeElement) ((DeclaredType)webFault.getSuperclass()).asElement();
-              if (superFault != null && allFaults.containsKey(superFault.getQualifiedName().toString()) && allFaults.get(superFault.getQualifiedName().toString()).isImplicitSchemaElement()) {
-                model.put("superFault", allFaults.get(superFault.getQualifiedName().toString()));
-              }
-              else {
-                model.remove("superFault");
-              }
-
-              model.put("fault", webFault);
-              processTemplate(getTemplateURL("client-web-fault.fmt"), model);
-            }
-          }
-        }
-
-        for (SchemaInfo schemaInfo : this.jaxbModule.getJaxbContext().getSchemas().values()) {
-          for (TypeDefinition typeDefinition : schemaInfo.getTypeDefinitions()) {
-            if (facetFilter.accept(typeDefinition)) {
-              if (useServerSide(typeDefinition, matcher)) {
-                copyServerSideType(sourceDir, typeDefinition);
-              }
-              else {
-                model.put("rootEl", this.jaxbModule.getJaxbContext().findElementDeclaration(typeDefinition));
-                model.put("type", typeDefinition);
-                URL template = typeDefinition.isEnum() ? typeDefinition instanceof QNameEnumTypeDefinition ? getTemplateURL("client-qname-enum-type.fmt") : getTemplateURL("client-enum-type.fmt") : typeDefinition.isSimple() ? getTemplateURL("client-simple-type.fmt") : getTemplateURL("client-complex-type.fmt");
-                processTemplate(template, model);
-              }
-            }
-          }
-
-          for (Registry registry : schemaInfo.getRegistries()) {
-            model.put("registry", registry);
-            processTemplate(getTemplateURL("client-registry.fmt"), model);
-          }
-        }
-      }
-      catch (IOException | TemplateException e) {
-        throw new EnunciateException(e);
-      }
+    if (isUpToDateWithSources(sourceDir)) {
+      info("Skipping generation of Java client sources as everything appears up-to-date...");
     }
     else {
-      info("Skipping generation of Java client sources as everything appears up-to-date...");
+      generateClientSources(sourceDir, model, conversions, jaxbContext, facetFilter);
     }
 
     context.setProperty(LIRBARY_DESCRIPTION_PROPERTY, readLibraryDescription(model));
 
     return sourceDir;
+  }
+
+  private FacetFilter createFacetFilter() {
+    Set<String> facetIncludes = new TreeSet<>(this.enunciate.getConfiguration().getFacetIncludes());
+    facetIncludes.addAll(getFacetIncludes());
+    Set<String> facetExcludes = new TreeSet<>(this.enunciate.getConfiguration().getFacetExcludes());
+    facetExcludes.addAll(getFacetExcludes());
+    return new FacetFilter(facetIncludes, facetExcludes);
+  }
+
+  private void generateClientSources(File sourceDir, Map<String, Object> model, Map<String, String> conversions, EnunciateJaxbContext jaxbContext, FacetFilter facetFilter) {
+    try {
+      debug("Generating the Java client classes...");
+
+      HashMap<String, WebFault> allFaults = new HashMap<>();
+      AntPatternMatcher matcher = new AntPatternMatcher();
+      matcher.setPathSeparator(".");
+      ClientClassnameForMethod classnameFor = new ClientClassnameForMethod(conversions, jaxbContext);
+
+      generateJaxwsSources(sourceDir, model, facetFilter, matcher, classnameFor, allFaults);
+      generateJaxbSources(sourceDir, model, facetFilter, matcher);
+    }
+    catch (IOException | TemplateException e) {
+      throw new EnunciateException(e);
+    }
+  }
+
+  private void generateJaxwsSources(File sourceDir, Map<String, Object> model, FacetFilter facetFilter, AntPatternMatcher matcher, ClientClassnameForMethod classnameFor, Map<String, WebFault> allFaults) throws IOException, TemplateException {
+    if (this.jaxwsModule == null) {
+      return;
+    }
+
+    Set<String> seeAlsos = new TreeSet<>();
+    // Process the annotations, the request/response beans, and gather the set of web faults
+    // for each endpoint interface.
+    for (WsdlInfo wsdlInfo : this.jaxwsModule.getJaxwsContext().getWsdls().values()) {
+      addEndpointSources(model, facetFilter, classnameFor, allFaults, seeAlsos, wsdlInfo);
+    }
+
+    //gather the annotation information and process the possible beans for each web fault.
+    addFaultBeans(model, classnameFor, allFaults, seeAlsos);
+    model.put("seeAlsoBeans", seeAlsos);
+    model.put("baseUri", this.enunciate.getConfiguration().getApplicationRoot());
+    generateWebFaultSources(sourceDir, model, matcher, allFaults);
+  }
+
+  private void addEndpointSources(Map<String, Object> model, FacetFilter facetFilter, ClientClassnameForMethod classnameFor, Map<String, WebFault> allFaults, Set<String> seeAlsos, WsdlInfo wsdlInfo) throws IOException, TemplateException {
+    validateWsdlFile(wsdlInfo);
+    for (EndpointInterface endpointInterface : wsdlInfo.getEndpointInterfaces()) {
+      addEndpointSource(model, facetFilter, classnameFor, allFaults, seeAlsos, wsdlInfo, endpointInterface);
+    }
+  }
+
+  private void validateWsdlFile(WsdlInfo wsdlInfo) {
+    if (wsdlInfo.getWsdlFile() == null) {
+      throw new EnunciateException("WSDL " + wsdlInfo.getId() + " doesn't have a filename.");
+    }
+  }
+
+  private void addEndpointSource(Map<String, Object> model, FacetFilter facetFilter, ClientClassnameForMethod classnameFor, Map<String, WebFault> allFaults, Set<String> seeAlsos, WsdlInfo wsdlInfo, EndpointInterface endpointInterface) throws IOException, TemplateException {
+    if (!facetFilter.accept(endpointInterface)) {
+      return;
+    }
+
+    collectEndpointMessages(model, classnameFor, allFaults, seeAlsos, endpointInterface, facetFilter);
+    model.put("endpointInterface", endpointInterface);
+    model.put("wsdlFileName", wsdlInfo.getFilename());
+    processTemplate(getTemplateURL("client-endpoint-interface.fmt"), model);
+    processTemplate(getTemplateURL("client-soap-endpoint-impl.fmt"), model);
+  }
+
+  private void collectEndpointMessages(Map<String, Object> model, ClientClassnameForMethod classnameFor, Map<String, WebFault> allFaults, Set<String> seeAlsos, EndpointInterface endpointInterface, FacetFilter facetFilter) throws IOException, TemplateException {
+    for (WebMethod webMethod : endpointInterface.getWebMethods()) {
+      collectWebMethodMessages(model, classnameFor, allFaults, seeAlsos, webMethod, facetFilter);
+    }
+  }
+
+  private void collectWebMethodMessages(Map<String, Object> model, ClientClassnameForMethod classnameFor, Map<String, WebFault> allFaults, Set<String> seeAlsos, WebMethod webMethod, FacetFilter facetFilter) throws IOException, TemplateException {
+    if (!facetFilter.accept(webMethod)) {
+      return;
+    }
+
+    for (WebMessage webMessage : webMethod.getMessages()) {
+      collectWebMessage(model, classnameFor, allFaults, seeAlsos, webMessage);
+    }
+  }
+
+  private void collectWebMessage(Map<String, Object> model, ClientClassnameForMethod classnameFor, Map<String, WebFault> allFaults, Set<String> seeAlsos, WebMessage webMessage) throws IOException, TemplateException {
+    if (webMessage instanceof RequestWrapper requestWrapper) {
+      model.put("message", webMessage);
+      processTemplate(getTemplateURL("client-request-bean.fmt"), model);
+      seeAlsos.add(getBeanName(classnameFor, requestWrapper.getRequestBeanName()));
+      return;
+    }
+
+    if (webMessage instanceof ResponseWrapper responseWrapper) {
+      model.put("message", webMessage);
+      processTemplate(getTemplateURL("client-response-bean.fmt"), model);
+      seeAlsos.add(getBeanName(classnameFor, responseWrapper.getResponseBeanName()));
+      return;
+    }
+
+    if (webMessage instanceof WebFault fault) {
+      allFaults.put(fault.getQualifiedName().toString(), fault);
+    }
+  }
+
+  private void addFaultBeans(Map<String, Object> model, ClientClassnameForMethod classnameFor, Map<String, WebFault> allFaults, Set<String> seeAlsos) throws IOException, TemplateException {
+    for (WebFault webFault : allFaults.values()) {
+      boolean implicit = webFault.isImplicitSchemaElement();
+      String faultBean = implicit ? getBeanName(classnameFor, webFault.getImplicitFaultBeanQualifiedName()) : classnameFor.convert(webFault.getExplicitFaultBeanType());
+      seeAlsos.add(faultBean);
+      if (!implicit) {
+        continue;
+      }
+
+      model.put("fault", webFault);
+      processTemplate(getTemplateURL("client-fault-bean.fmt"), model);
+    }
+  }
+
+  private void generateWebFaultSources(File sourceDir, Map<String, Object> model, AntPatternMatcher matcher, Map<String, WebFault> allFaults) throws IOException, TemplateException {
+    for (WebFault webFault : allFaults.values()) {
+      if (useServerSide(webFault, matcher)) {
+        copyServerSideType(sourceDir, webFault);
+      }
+      else {
+        putSuperFault(model, allFaults, webFault);
+        model.put("fault", webFault);
+        processTemplate(getTemplateURL("client-web-fault.fmt"), model);
+      }
+    }
+  }
+
+  private void putSuperFault(Map<String, Object> model, Map<String, WebFault> allFaults, WebFault webFault) {
+    TypeElement superFault = (TypeElement) ((DeclaredType) webFault.getSuperclass()).asElement();
+    WebFault parentFault = superFault == null ? null : allFaults.get(superFault.getQualifiedName().toString());
+    if (parentFault != null && parentFault.isImplicitSchemaElement()) {
+      model.put("superFault", parentFault);
+    }
+    else {
+      model.remove("superFault");
+    }
+  }
+
+  private void generateJaxbSources(File sourceDir, Map<String, Object> model, FacetFilter facetFilter, AntPatternMatcher matcher) throws IOException, TemplateException {
+    for (SchemaInfo schemaInfo : this.jaxbModule.getJaxbContext().getSchemas().values()) {
+      generateSchemaSources(sourceDir, model, facetFilter, matcher, schemaInfo);
+    }
+  }
+
+  private void generateSchemaSources(File sourceDir, Map<String, Object> model, FacetFilter facetFilter, AntPatternMatcher matcher, SchemaInfo schemaInfo) throws IOException, TemplateException {
+    for (TypeDefinition typeDefinition : schemaInfo.getTypeDefinitions()) {
+      generateTypeDefinitionSource(sourceDir, model, facetFilter, matcher, typeDefinition);
+    }
+
+    for (Registry registry : schemaInfo.getRegistries()) {
+      model.put("registry", registry);
+      processTemplate(getTemplateURL("client-registry.fmt"), model);
+    }
+  }
+
+  private void generateTypeDefinitionSource(File sourceDir, Map<String, Object> model, FacetFilter facetFilter, AntPatternMatcher matcher, TypeDefinition typeDefinition) throws IOException, TemplateException {
+    if (!facetFilter.accept(typeDefinition)) {
+      return;
+    }
+
+    if (useServerSide(typeDefinition, matcher)) {
+      copyServerSideType(sourceDir, typeDefinition);
+      return;
+    }
+
+    model.put("rootEl", this.jaxbModule.getJaxbContext().findElementDeclaration(typeDefinition));
+    model.put("type", typeDefinition);
+    processTemplate(getTypeDefinitionTemplate(typeDefinition), model);
+  }
+
+  private URL getTypeDefinitionTemplate(TypeDefinition typeDefinition) {
+    if (typeDefinition.isEnum()) {
+      if (typeDefinition instanceof QNameEnumTypeDefinition) {
+        return getTemplateURL("client-qname-enum-type.fmt");
+      }
+      return getTemplateURL("client-enum-type.fmt");
+    }
+
+    if (typeDefinition.isSimple()) {
+      return getTemplateURL("client-simple-type.fmt");
+    }
+
+    return getTemplateURL("client-complex-type.fmt");
   }
 
   protected void copyServerSideType(File sourceDir, TypeElement type) throws IOException {

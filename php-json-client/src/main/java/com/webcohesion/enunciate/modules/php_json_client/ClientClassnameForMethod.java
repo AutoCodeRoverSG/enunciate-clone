@@ -55,6 +55,12 @@ import static com.webcohesion.enunciate.javac.decorations.element.ElementUtils.*
  */
 public class ClientClassnameForMethod extends com.webcohesion.enunciate.util.freemarker.ClientClassnameForMethod {
 
+  private static final String BOOLEAN_TYPE = "Boolean";
+  private static final String INTEGER_TYPE = "Integer";
+  private static final String STRING_TYPE = "String";
+  private static final String OBJECT_TYPE = "Object";
+  private static final String ARRAY_TYPE = "Array";
+
   private final Map<String, String> classConversions = new HashMap<String, String>();
   private final EnunciateJacksonContext jacksonContext;
 
@@ -62,34 +68,34 @@ public class ClientClassnameForMethod extends com.webcohesion.enunciate.util.fre
     super(conversions, jacksonContext.getContext());
     this.jacksonContext = jacksonContext;
 
-    classConversions.put(Boolean.class.getName(), "Boolean");
-    classConversions.put(AtomicBoolean.class.getName(), "Boolean");
-    classConversions.put(String.class.getName(), "String");
-    classConversions.put(Integer.class.getName(), "Integer");
-    classConversions.put(AtomicInteger.class.getName(), "Integer");
-    classConversions.put(Short.class.getName(), "Integer");
-    classConversions.put(Byte.class.getName(), "Integer");
-    classConversions.put(Double.class.getName(), "Integer");
-    classConversions.put(Long.class.getName(), "Integer");
-    classConversions.put(AtomicLong.class.getName(), "Integer");
-    classConversions.put(java.math.BigInteger.class.getName(), "Integer");
-    classConversions.put(java.math.BigDecimal.class.getName(), "Integer");
-    classConversions.put(Float.class.getName(), "Integer");
-    classConversions.put(Character.class.getName(), "Integer");
-    classConversions.put(Date.class.getName(), "String");
-    classConversions.put(Timestamp.class.getName(), "String");
-    classConversions.put(DataHandler.class.getName(), "String");
-    classConversions.put(java.awt.Image.class.getName(), "String");
-    classConversions.put(javax.xml.transform.Source.class.getName(), "String");
-    classConversions.put(QName.class.getName(), "String");
-    classConversions.put(URI.class.getName(), "String");
-    classConversions.put(UUID.class.getName(), "String");
-    classConversions.put(XMLGregorianCalendar.class.getName(), "String");
-    classConversions.put(GregorianCalendar.class.getName(), "String");
-    classConversions.put(Calendar.class.getName(), "String");
-    classConversions.put(javax.xml.datatype.Duration.class.getName(), "String");
-    classConversions.put(jakarta.xml.bind.JAXBElement.class.getName(), "Object");
-    classConversions.put(Object.class.getName(), "Object");
+    classConversions.put(Boolean.class.getName(), BOOLEAN_TYPE);
+    classConversions.put(AtomicBoolean.class.getName(), BOOLEAN_TYPE);
+    classConversions.put(String.class.getName(), STRING_TYPE);
+    classConversions.put(Integer.class.getName(), INTEGER_TYPE);
+    classConversions.put(AtomicInteger.class.getName(), INTEGER_TYPE);
+    classConversions.put(Short.class.getName(), INTEGER_TYPE);
+    classConversions.put(Byte.class.getName(), INTEGER_TYPE);
+    classConversions.put(Double.class.getName(), INTEGER_TYPE);
+    classConversions.put(Long.class.getName(), INTEGER_TYPE);
+    classConversions.put(AtomicLong.class.getName(), INTEGER_TYPE);
+    classConversions.put(java.math.BigInteger.class.getName(), INTEGER_TYPE);
+    classConversions.put(java.math.BigDecimal.class.getName(), INTEGER_TYPE);
+    classConversions.put(Float.class.getName(), INTEGER_TYPE);
+    classConversions.put(Character.class.getName(), INTEGER_TYPE);
+    classConversions.put(Date.class.getName(), STRING_TYPE);
+    classConversions.put(Timestamp.class.getName(), STRING_TYPE);
+    classConversions.put(DataHandler.class.getName(), STRING_TYPE);
+    classConversions.put(java.awt.Image.class.getName(), STRING_TYPE);
+    classConversions.put(javax.xml.transform.Source.class.getName(), STRING_TYPE);
+    classConversions.put(QName.class.getName(), STRING_TYPE);
+    classConversions.put(URI.class.getName(), STRING_TYPE);
+    classConversions.put(UUID.class.getName(), STRING_TYPE);
+    classConversions.put(XMLGregorianCalendar.class.getName(), STRING_TYPE);
+    classConversions.put(GregorianCalendar.class.getName(), STRING_TYPE);
+    classConversions.put(Calendar.class.getName(), STRING_TYPE);
+    classConversions.put(javax.xml.datatype.Duration.class.getName(), STRING_TYPE);
+    classConversions.put(jakarta.xml.bind.JAXBElement.class.getName(), OBJECT_TYPE);
+    classConversions.put(Object.class.getName(), OBJECT_TYPE);
   }
 
   @Override
@@ -108,7 +114,7 @@ public class ClientClassnameForMethod extends com.webcohesion.enunciate.util.fre
         }
       }
 
-      return "Object";
+      return OBJECT_TYPE;
     }
 
     return super.convertUnwrappedObject(unwrapped);
@@ -121,10 +127,10 @@ public class ClientClassnameForMethod extends com.webcohesion.enunciate.util.fre
       return classConversions.get(fqn);
     }
     else if (declaration.getKind() == ElementKind.ENUM) {
-      return "String";
+      return STRING_TYPE;
     }
     else if (isCollection(declaration) || isStream(declaration) || isMap(declaration)) {
-      return "Array";
+      return ARRAY_TYPE;
     }
 
     if (this.jacksonContext != null) {
@@ -156,7 +162,7 @@ public class ClientClassnameForMethod extends com.webcohesion.enunciate.util.fre
       TypeKind kind = decorated.getKind();
       switch (kind) {
         case BOOLEAN:
-          return "Boolean";
+          return BOOLEAN_TYPE;
         case BYTE:
         case INT:
         case SHORT:
@@ -164,21 +170,21 @@ public class ClientClassnameForMethod extends com.webcohesion.enunciate.util.fre
         case FLOAT:
         case DOUBLE:
         case LONG:
-          return "Integer";
+          return INTEGER_TYPE;
         default:
-          return "String";
+          return STRING_TYPE;
       }
     }
     else if (decorated.isEnum()) {
-      return "String";
+      return STRING_TYPE;
     }
     else if (decorated.isCollection() || decorated.isStream()) {
-      return "Array";
+      return ARRAY_TYPE;
     }
     else if (decorated.isArray()) {
       TypeMirror componentType = ((ArrayType) decorated).getComponentType();
       if ((componentType instanceof PrimitiveType) && componentType.getKind() == TypeKind.BYTE) {
-        return "String";
+        return STRING_TYPE;
       }
     }
 
@@ -192,7 +198,7 @@ public class ClientClassnameForMethod extends com.webcohesion.enunciate.util.fre
 
   @Override
   public String convert(TypeVariable typeVariable) throws TemplateModelException {
-    String conversion = "Object";
+    String conversion = OBJECT_TYPE;
 
     if (typeVariable.getUpperBound() != null) {
       conversion = convert(typeVariable.getUpperBound());
